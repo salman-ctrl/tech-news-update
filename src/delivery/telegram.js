@@ -4,6 +4,9 @@ import { logger } from '../lib/logger.js';
 
 const API_BASE = 'https://api.telegram.org';
 const MAX_LENGTH = 4096;
+const SEND_GAP_MS = 400; // jeda antar pesan supaya tidak kena rate limit
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function callApi(botToken, method, payload) {
   const response = await fetch(`${API_BASE}/bot${botToken}/${method}`, {
@@ -25,10 +28,7 @@ async function callApi(botToken, method, payload) {
   return body.result;
 }
 
-/**
- * Kirim satu pesan. Pesan yang melebihi batas Telegram dipotong,
- * bukan dibiarkan gagal diam-diam.
- */
+/** Kirim satu pesan. */
 export async function sendMessage(config, text, options = {}) {
   const { parseMode = 'HTML', disablePreview = true, replyMarkup } = options;
 
@@ -56,6 +56,24 @@ export async function sendMessage(config, text, options = {}) {
   return result;
 }
 
+/**
+ * Kirim beberapa pesan berurutan dengan jeda.
+ * Dipakai saat digest tidak muat dalam satu pesan.
+ */
+export async function sendMessages(config, chunks, options = {}) {
+  const results = [];
+
+  for (const [index, chunk] of chunks.entries()) {
+    results.push(await sendMessage(config, chunk, options));
+    if (index < chunks.length - 1 && !config.dryRun) {
+      await sleep(SEND_GAP_MS);
+    }
+  }
+
+  logger.info('telegram.batch_sent', { count: chunks.length });
+  return results;
+}
+
 /** Escape teks yang masuk ke parse_mode HTML. */
 export function escapeHtml(value) {
   return String(value)
@@ -63,3 +81,5 @@ export function escapeHtml(value) {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;');
 }
+
+export { MAX_LENGTH };
