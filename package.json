@@ -1,0 +1,9 @@
+{
+  "name": "tech-news-agent",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env index.js",
+    "dry": "node --env-file=.env index.js --dry-run"
+  }
+}
