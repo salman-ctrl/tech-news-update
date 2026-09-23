@@ -24,7 +24,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # jsdom 30 butuh undici yang baru — Node 20 belum punya.
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
