@@ -46,6 +46,7 @@ function validateItems(raw) {
       sumber: String(item.sumber ?? 'web'),
       pendukung: Number(item.pendukung) || 1,
       sumberResmi: Boolean(item.sumber_resmi),
+      threadId: item.thread_id ? String(item.thread_id) : null,
       skor: Number(item.skor) || 5,
     });
   }
@@ -58,7 +59,7 @@ function validateItems(raw) {
  * Satu percobaan penuh dengan satu model.
  * Model memutuskan sendiri tool mana yang dipanggil dan kapan berhenti.
  */
-async function runWithModel(config, model, candidates, history) {
+async function runWithModel(config, model, candidates, history, threads) {
   const ai = new GoogleGenAI({
     apiKey: config.gemini.apiKey,
     // Kompresi dimatikan — jalur jaringan tertentu merusak respons gzip.
@@ -79,9 +80,9 @@ async function runWithModel(config, model, candidates, history) {
   const runners = createToolRunners(config);
   const startedAt = Date.now();
   let toolCalls = 0;
-  let message = buildUserPrompt(candidates, { history });
+  let message = buildUserPrompt(candidates, { history, threads });
 
-  logger.info('agent.start', { model, candidates: candidates.length });
+  logger.info('agent.start', { model, candidates: candidates.length, threads: threads.length });
 
   while (true) {
     if (Date.now() - startedAt > MAX_DURATION_MS) {
@@ -153,7 +154,7 @@ async function runWithModel(config, model, candidates, history) {
  * Loop agent dengan fallback antar model.
  * Kalau satu model penuh (503), pindah ke model berikutnya di daftar.
  */
-export async function runAgent(config, candidates, { history = [] } = {}) {
+export async function runAgent(config, candidates, { history = [], threads = [] } = {}) {
   if (!config.gemini.apiKey) {
     throw new AppError('GEMINI_API_KEY belum diisi', { code: 'CONFIG_ERROR' });
   }
@@ -162,7 +163,7 @@ export async function runAgent(config, candidates, { history = [] } = {}) {
 
   for (const model of config.gemini.models) {
     try {
-      return await runWithModel(config, model, candidates, history);
+      return await runWithModel(config, model, candidates, history, threads);
     } catch (error) {
       lastError = error;
 

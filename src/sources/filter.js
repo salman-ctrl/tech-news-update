@@ -106,6 +106,12 @@ export function filterRecent(items, hours = 24, now = Date.now()) {
   });
 }
 
+/** Buang kandidat yang hash URL-nya sudah pernah dikirim. */
+export function excludeSeen(items, seenHashes, hashFn) {
+  if (!seenHashes || seenHashes.size === 0) return items;
+  return items.filter((item) => !seenHashes.has(hashFn(item.link)));
+}
+
 /** Pipeline lengkap: saring waktu, gabung duplikat, skor, tandai, urutkan, potong. */
 export function rankItems(items, { limit = 100, hours = 24, now = Date.now() } = {}) {
   const recent = filterRecent(items, hours, now);

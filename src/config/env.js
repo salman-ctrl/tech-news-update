@@ -17,6 +17,10 @@ const DEFAULT_MODELS =
   'gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-flash-latest,gemini-3.1-flash-lite,gemini-3.5-flash-lite';
 
 export function loadConfig({ requireGemini = false } = {}) {
+  const accountId = optional('CLOUDFLARE_ACCOUNT_ID');
+  const apiToken = optional('CLOUDFLARE_API_TOKEN');
+  const databaseId = optional('D1_DATABASE_ID');
+
   return {
     telegram: {
       botToken: required('TELEGRAM_BOT_TOKEN'),
@@ -24,7 +28,6 @@ export function loadConfig({ requireGemini = false } = {}) {
     },
     gemini: {
       apiKey: requireGemini ? required('GEMINI_API_KEY') : optional('GEMINI_API_KEY'),
-      // Daftar model, dicoba berurutan kalau yang sebelumnya penuh (503).
       models: optional('GEMINI_MODELS', DEFAULT_MODELS)
         .split(',')
         .map((m) => m.trim())
@@ -35,6 +38,13 @@ export function loadConfig({ requireGemini = false } = {}) {
     },
     github: {
       token: optional('GITHUB_TOKEN'),
+    },
+    d1: {
+      accountId,
+      apiToken,
+      databaseId,
+      // Kalau salah satu kosong, lapisan memory dilewati dan agent tetap jalan.
+      enabled: Boolean(accountId && apiToken && databaseId),
     },
     dryRun: process.argv.includes('--dry-run'),
   };
