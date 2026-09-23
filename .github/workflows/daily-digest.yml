@@ -1,0 +1,44 @@
+name: Daily Tech News Digest
+
+on:
+  # 23:00 UTC = 06:00 WIB hari berikutnya
+  schedule:
+    - cron: '0 23 * * *'
+  # Tombol jalankan manual di tab Actions
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Jalankan tanpa kirim ke Telegram'
+        type: boolean
+        default: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Run agent
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PAT }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          GEMINI_MODELS: 'gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-flash-latest,gemini-3.1-flash-lite,gemini-3.5-flash-lite'
+        run: node index.js ${{ inputs.dry_run && '--dry-run' || '' }}
