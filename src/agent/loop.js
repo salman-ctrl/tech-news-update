@@ -118,7 +118,7 @@ async function runWithModel(config, model, candidates, history, threads) {
       logger.info('agent.done', { model, toolCalls, ms: Date.now() - startedAt });
 
       try {
-        return validateItems(JSON.parse(text));
+        return { items: validateItems(JSON.parse(text)), toolCalls, model };
       } catch (error) {
         logger.error('agent.parse_failed', {
           error: error.message,
@@ -165,7 +165,7 @@ async function runWithModel(config, model, candidates, history, threads) {
 
 /**
  * Loop agent dengan fallback antar model.
- * Kalau satu model penuh, pindah ke model berikutnya di daftar.
+ * Mengembalikan { items, toolCalls, model }.
  */
 export async function runAgent(config, candidates, { history = [], threads = [] } = {}) {
   if (!config.gemini.apiKey) {

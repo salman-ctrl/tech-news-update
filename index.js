@@ -109,15 +109,16 @@ async function main() {
   let curated = [];
 
   try {
-    curated = await trackStep('run_agent', () =>
+    const result = await trackStep('run_agent', () =>
       runAgent(config, candidates, { history: memory.history, threads: memory.threads })
     );
 
-    logger.info('agent.curated', { count: curated.length });
+    curated = result.items;
+    logger.info('agent.curated', { count: curated.length, toolCalls: result.toolCalls });
 
     chunks = formatDigest(curated, {
       failures,
-      stats: { candidates: candidates.length },
+      stats: { candidates: candidates.length, toolCalls: result.toolCalls },
     });
   } catch (error) {
     // Aturan: jangan pernah diam. Kalau agent gagal, kirim judul mentah.

@@ -3,13 +3,18 @@ import { withRetry } from '../lib/retry.js';
 import { logger } from '../lib/logger.js';
 import { HttpError } from '../lib/errors.js';
 
-/** Beberapa situs menolak User-Agent yang terlihat seperti bot. */
+/**
+ * Beberapa situs menolak User-Agent yang terlihat seperti bot.
+ * Accept-Encoding identity mencegah respons gzip yang tidak terbuka
+ * di jalur jaringan tertentu.
+ */
 const parser = new Parser({
   timeout: 30000,
   headers: {
     'User-Agent':
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
     Accept: 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+    'Accept-Encoding': 'identity',
   },
 });
 
