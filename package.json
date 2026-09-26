@@ -7,7 +7,9 @@
   },
   "scripts": {
     "start": "node --env-file=.env index.js",
-    "dry": "node --env-file=.env index.js --dry-run"
+    "dry": "node --env-file=.env index.js --dry-run",
+    "weekly": "node --env-file=.env weekly.js",
+    "weekly:dry": "node --env-file=.env weekly.js --dry-run"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

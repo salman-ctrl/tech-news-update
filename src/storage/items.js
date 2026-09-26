@@ -28,6 +28,21 @@ export async function recentTitles(db, days = 7, limit = 60) {
   return rows.map((row) => row.judul);
 }
 
+/**
+ * Ambil item lengkap dalam N hari terakhir.
+ * Dipakai weekly digest untuk melihat pola seminggu.
+ */
+export async function itemsSince(db, days = 7, limit = 400) {
+  return db.all(
+    `SELECT judul, ringkasan, kategori, sumber, url, skor, sumber_resmi, thread_id, sent_at
+       FROM items
+      WHERE sent_at >= datetime('now', ?)
+      ORDER BY skor DESC, sent_at DESC
+      LIMIT ?`,
+    [`-${days} days`, limit]
+  );
+}
+
 /** Simpan item yang baru dikirim. Satu baris gagal tidak menjatuhkan sisanya. */
 export async function saveItems(db, items) {
   const now = new Date().toISOString();
