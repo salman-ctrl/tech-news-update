@@ -52,7 +52,7 @@ export const WATCHED_REPOS = [
 
 /**
  * Query dasar untuk Tavily. Agent boleh menambah query sendiri
- * di tahap berikutnya — ini hanya jaring pengaman.
+ * saat run — ini hanya jaring pengaman.
  */
 export const DISCOVERY_QUERIES = [
   'new AI model release',
@@ -63,3 +63,57 @@ export const DISCOVERY_QUERIES = [
 ];
 
 export const MAX_ITEMS = 100;
+
+/**
+ * Sumber yang tidak perlu ditandai ⚠️ meski cuma satu yang memberitakan.
+ * Media teknis mapan dan blog resmi vendor — reputasinya sudah cukup jadi jaminan.
+ * Dicocokkan longgar, jadi "AWS News" cocok dengan "aws".
+ */
+export const TRUSTED_SOURCES = [
+  // Media teknis
+  'infoq',
+  'techcrunch',
+  'ars technica',
+  'arstechnica',
+  'the verge',
+  'hacker news',
+  'search engine roundtable',
+  'search engine land',
+  'seroundtable',
+  'tech in asia',
+  'techinasia',
+  'dailysocial',
+  'zdnet',
+  'engadget',
+  'cnbc',
+  'reuters',
+  'bloomberg',
+
+  // Blog resmi vendor
+  'aws',
+  'amazon',
+  'vercel',
+  'cloudflare',
+  'openai',
+  'anthropic',
+  'google',
+  'deepmind',
+  'hugging face',
+  'huggingface',
+  'node.js',
+  'nodejs',
+  'react',
+  'web.dev',
+  'css-tricks',
+  'github',
+  'microsoft',
+  'meta',
+  'nvidia',
+];
+
+/** Cek apakah sebuah nama sumber termasuk tepercaya. */
+export function isTrustedSource(sumber) {
+  if (!sumber) return false;
+  const name = String(sumber).toLowerCase();
+  return TRUSTED_SOURCES.some((trusted) => name.includes(trusted));
+}

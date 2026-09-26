@@ -5,8 +5,13 @@ import { withRetry } from '../lib/retry.js';
 import { logger } from '../lib/logger.js';
 import { AppError } from '../lib/errors.js';
 
-const MAX_TOOL_CALLS = 15;
-const MAX_DURATION_MS = 3 * 60 * 1000;
+/**
+ * Tiap tool call = satu request ke Gemini.
+ * Free tier cuma 5 request per menit, jadi batasnya harus rendah
+ * dan durasinya harus panjang supaya muat antre.
+ */
+const MAX_TOOL_CALLS = 8;
+const MAX_DURATION_MS = 8 * 60 * 1000;
 
 /** Bersihkan pagar markdown yang kadang dibungkus model di sekitar JSON. */
 function stripFence(text) {
@@ -17,10 +22,17 @@ function stripFence(text) {
     .trim();
 }
 
-/** 503 dan 429 dari Gemini layak dicoba ulang atau dipindah ke model lain. */
+/** 503, 429, dan 504 layak dicoba ulang atau dipindah ke model lain. */
 function isRetryableGeminiError(error) {
   const text = String(error?.message ?? '');
-  return text.includes('503') || text.includes('429') || text.includes('UNAVAILABLE');
+  return (
+    text.includes('503') ||
+    text.includes('429') ||
+    text.includes('504') ||
+    text.includes('UNAVAILABLE') ||
+    text.includes('RESOURCE_EXHAUSTED') ||
+    text.includes('DEADLINE_EXCEEDED')
+  );
 }
 
 /** Validasi bentuk output model. Item cacat dibuang, bukan menjatuhkan run. */
@@ -92,8 +104,9 @@ async function runWithModel(config, model, candidates, history, threads) {
 
     const response = await withRetry(() => chat.sendMessage({ message }), {
       label: `gemini.${model}`,
-      retries: 2,
-      baseDelay: 2000,
+      retries: 3,
+      baseDelay: 5000,
+      maxDelay: 60000,
       isRetryable: isRetryableGeminiError,
     });
 
@@ -152,7 +165,7 @@ async function runWithModel(config, model, candidates, history, threads) {
 
 /**
  * Loop agent dengan fallback antar model.
- * Kalau satu model penuh (503), pindah ke model berikutnya di daftar.
+ * Kalau satu model penuh, pindah ke model berikutnya di daftar.
  */
 export async function runAgent(config, candidates, { history = [], threads = [] } = {}) {
   if (!config.gemini.apiKey) {
@@ -167,7 +180,6 @@ export async function runAgent(config, candidates, { history = [], threads = [] 
     } catch (error) {
       lastError = error;
 
-      // Error selain kepadatan server tidak layak dicoba di model lain.
       if (!isRetryableGeminiError(error)) throw error;
 
       logger.warn('agent.model_unavailable', {

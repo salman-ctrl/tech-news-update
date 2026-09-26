@@ -1,4 +1,5 @@
 import { escapeHtml, MAX_LENGTH } from './telegram.js';
+import { isTrustedSource } from '../config/feeds.js';
 
 const SAFE_LIMIT = MAX_LENGTH - 200;
 
@@ -25,12 +26,23 @@ function groupByKategori(items) {
   return groups;
 }
 
-/** Penanda kepercayaan berdasarkan sumber resmi dan jumlah pendukung. */
+/**
+ * Apakah item ini perlu dicek ulang?
+ * Ditandai hanya kalau bukan sumber resmi, bukan sumber tepercaya,
+ * dan cuma satu yang memberitakan. Kalau semua ditandai, penandanya jadi tak berarti.
+ */
+function needsCheck(item) {
+  if (item.sumberResmi) return false;
+  if (item.pendukung >= 2) return false;
+  if (isTrustedSource(item.sumber)) return false;
+  return true;
+}
+
+/** Penanda kepercayaan. ✅ untuk sumber resmi, ⚠️ untuk yang perlu dicek. */
 function trustBadge(item) {
-  if (item.sumberResmi) return '✅';
-  if (item.pendukung >= 3) return '';
-  if (item.pendukung === 2) return '';
-  return ' ⚠️';
+  if (item.sumberResmi) return '✅ ';
+  if (needsCheck(item)) return '⚠️ ';
+  return '';
 }
 
 /** Satu blok berita. Fungsi murni. */
@@ -41,10 +53,9 @@ function renderItem(item) {
   const badge = trustBadge(item);
   const ringkasan = escapeHtml(item.ringkasan);
 
-  const meta =
-    item.pendukung > 1 ? `${sumber} +${item.pendukung - 1} sumber lain` : sumber;
+  const meta = item.pendukung > 1 ? `${sumber} +${item.pendukung - 1} sumber lain` : sumber;
 
-  return `${badge} <a href="${link}"><b>${judul}</b></a>\n${ringkasan}\n<i>${meta}</i>`;
+  return `${badge}<a href="${link}"><b>${judul}</b></a>\n${ringkasan}\n<i>${meta}</i>`;
 }
 
 /** Bagi baris jadi beberapa pesan yang muat di Telegram. */
@@ -67,9 +78,7 @@ function chunkLines(lines, header) {
   return chunks;
 }
 
-/**
- * Susun digest hasil kurasi agent jadi array pesan Telegram.
- */
+/** Susun digest hasil kurasi agent jadi array pesan Telegram. */
 export function formatDigest(items, { failures = [], date = new Date(), stats = {} } = {}) {
   const dateLabel = date.toLocaleDateString('id-ID', { dateStyle: 'long' });
 
@@ -96,10 +105,10 @@ export function formatDigest(items, { failures = [], date = new Date(), stats = 
 
   const notes = [];
 
-  const unverified = items.filter((item) => !item.sumberResmi && item.pendukung < 2);
-  if (unverified.length > 0) {
+  const flagged = items.filter(needsCheck);
+  if (flagged.length > 0) {
     notes.push(
-      `⚠️ ${unverified.length} item bersumber tunggal dan belum terkonfirmasi — cek dulu sebelum dipercaya.`
+      `⚠️ ${flagged.length} item dari sumber yang belum dikenal — cek dulu sebelum dipercaya.`
     );
   }
 
@@ -130,7 +139,10 @@ export function formatFallback(items, reason) {
 
   const lines = items
     .slice(0, 25)
-    .map((item) => `• <a href="${escapeHtml(item.link)}">${escapeHtml(item.title)}</a>\n  <i>${escapeHtml(item.source)}</i>`);
+    .map(
+      (item) =>
+        `• <a href="${escapeHtml(item.link)}">${escapeHtml(item.title)}</a>\n  <i>${escapeHtml(item.source)}</i>`
+    );
 
   return chunkLines(lines, header);
 }

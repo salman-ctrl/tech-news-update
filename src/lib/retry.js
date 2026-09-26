@@ -4,8 +4,24 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function defaultIsRetryable(error) {
   if (typeof error.isRetryable === 'boolean') return error.isRetryable;
-  // Error jaringan (DNS, timeout, connection reset) tidak punya status.
   return error.status === undefined;
+}
+
+/**
+ * Gemini menyelipkan waktu tunggu di dalam teks pesan error,
+ * misalnya "Please retry in 20.02s". Hormati itu daripada menebak.
+ */
+function parseRetryHint(error) {
+  if (error.retryAfter) return error.retryAfter * 1000;
+
+  const text = String(error?.message ?? '');
+  const match = text.match(/retry in (\d+(?:\.\d+)?)s/i);
+  if (match) return Math.ceil(Number(match[1]) * 1000);
+
+  const delay = text.match(/"retryDelay":\s*"(\d+)s"/);
+  if (delay) return Number(delay[1]) * 1000;
+
+  return null;
 }
 
 /**
@@ -16,7 +32,7 @@ export async function withRetry(fn, options = {}) {
   const {
     retries = 3,
     baseDelay = 500,
-    maxDelay = 8000,
+    maxDelay = 60000,
     label = 'request',
     isRetryable = defaultIsRetryable,
   } = options;
@@ -32,17 +48,19 @@ export async function withRetry(fn, options = {}) {
       const canRetry = attempt < retries && isRetryable(error);
       if (!canRetry) break;
 
-      // Telegram mengirim retry_after saat kena rate limit — hormati itu.
-      const hinted = error.retryAfter ? error.retryAfter * 1000 : null;
+      const hinted = parseRetryHint(error);
       const backoff = Math.min(baseDelay * 2 ** attempt, maxDelay);
-      const jitter = Math.floor(Math.random() * 250);
-      const delay = hinted ?? backoff + jitter;
+      const jitter = Math.floor(Math.random() * 500);
+
+      // Kalau server bilang berapa lama harus tunggu, ikuti — plus sedikit margin.
+      const delay = hinted ? Math.min(hinted + 1000, maxDelay) : backoff + jitter;
 
       logger.warn('retry', {
         label,
         attempt: attempt + 1,
         delay,
-        error: error.message,
+        hinted: Boolean(hinted),
+        error: String(error.message).slice(0, 100),
       });
 
       await sleep(delay);
