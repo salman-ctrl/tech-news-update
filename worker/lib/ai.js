@@ -30,6 +30,7 @@ function models(env) {
   return raw
     .split(',')
     .map((m) => m.trim())
+    .filter(Boolean);
 }
 
 /**
