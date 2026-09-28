@@ -48,6 +48,7 @@ function markdownToHtml(text) {
       .replace(/__([^_]+)__/g, '<b>$1</b>')
       .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?:]|$)/g, '$1<i>$2</i>')
       // Kode inline.
+      .replace(/`([^`\n]+)`/g, '<code>$1</code>')
       // Heading jadi tebal.
       .replace(/^#{1,6}\s*(.+)$/gm, '<b>$1</b>')
       // Bullet markdown jadi bullet biasa.
