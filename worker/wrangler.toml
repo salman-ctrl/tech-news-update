@@ -6,4 +6,4 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "tech-news-agent"
-database_id = "035380d3-8f16-4e59-8b2f-1f6cd0107316"
+database_id = "035380d3-8f16-4e59-8b2f-1f6cd0107316"    
